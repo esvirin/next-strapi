@@ -1,0 +1,67 @@
+version: '3.1'
+
+services:
+
+  next:
+    env_file: .env
+    build:
+      context: ./next
+      dockerfile: ./Dockerfile
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOST=0.0.0.0
+      - NEXT_PUBLIC_INTERNAL_URL=http://localhost:1337
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./next:/app
+    networks:
+      - net
+    depends_on:
+      - strapi
+
+
+  strapi:
+    build:
+      context: ./cms
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: development
+      DATABASE_CLIENT: postgres
+      DATABASE_NAME: strapi
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: strapi
+      DATABASE_PASSWORD: strapi
+    volumes:
+      - ./cms/config:/opt/app/config
+      - ./cms/src:/opt/app/src
+      - ./cms/package.json:/opt/package.json
+      - ./cms/yarn.lock:/opt/yarn.lock
+      - ./cms/.env:/opt/app/.env
+      - ./cms/public/uploads:/opt/app/public/uploads
+    ports:
+      - '1337:1337'
+    networks:
+      - net
+      - back
+    depends_on:
+      - postgres
+
+  postgres:
+   image: postgres
+   environment:
+     POSTGRES_DB: strapi
+     POSTGRES_USER: strapi
+     POSTGRES_PASSWORD: strapi
+   networks:
+    - back
+   volumes:
+     - ./data:/var/lib/postgresql/data
+
+networks:
+  back:
+    driver: bridge
+  net:
+    driver: bridge
